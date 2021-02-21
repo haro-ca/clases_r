@@ -1,0 +1,597 @@
+---
+title: "Estructuras condicionales"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+# Capitulo 17: Introducción
+El código es la base para el análisis, necesitas reescribir varias veces para que puedas obtener más claridad y estés seguro de que este cumpla su función. 
+
+Formas de obtener más claridad y facilidad en el código:
+1. Pipes(%>%)
+2. En lugar de usar copy y paste más de dos veces, el crear funciones te ayudara a tener menos errores.
+3. Necesitas estructuras de datos de R (capitulo 3).
+4. Iteraciones para poder repetir partes de código.
+
+# Capitulo 21: Iteración
+Las funciones necesitan de tres partes:
+1. Un nombre significativo que sepas su función cuando lo lees.
+2. La lista de tus entradas(argumentos), van adentro de la función, es decir, function(x, y, z)
+3. Poner el cuerpo de la función dentro de {} inmediatamente después de la función.
+La importancia de las funciones:
+1. Es posible ver los errores más rápido porque no ves el mismo código varias veces(copy and paste)
+2. Es más fácil hacer cambios, ya que NO necesitas cambiar TODO donde copiaste y pegaste
+3. Es posible que tengas menos errores, porque reduces lineas de código.
+
+Las iteraciones te ayudan cuando tu necesitas hacer la misma acción en diferentes entradas: repetir la misma acción en diferentes columnas o bases de datos. Dos tipos de iteraciones:
+1. Programación imperativa: for y while, se repite lo mismo por lo que se sabe explicitamente que se está haciendo.
+2. Programación funcional(FP): herramientas para extraer código duplicado
+
+### Bucles(loops)
+```{r}
+df <- tibble(
+  a = rnorm(10),
+  b = rnorm(10),
+  c = rnorm(10),
+  d = rnorm(10)
+)
+```
+
+```{r}
+median(df$a)
+
+median(df$b)
+
+median(df$c)
+
+median(df$d)
+
+```
+
+### "No debes de usar -copy and paste- más de dos veces, mejor usa un loop"
+```{r}
+output <- vector("double", ncol(df))  # 1. output
+for (i in seq_along(df)) {            # 2. sequence
+  output[[i]] <- median(df[[i]])      # 3. body
+}
+output
+
+for (i in 1:length(df)) {            # 2. sequence
+  output[[i]]<- median(df[[i]])      # 3. body (vector)
+}
+output
+```
+Una manera de crear un vector con entradas 0, F o "", pero que quieres que sea de un tipo en especifico (doble, entero, raw, complejo, caracter) vector("tipo", tamaño). 
+
+seq_along, es lo mismo de 1:length(df), solo que la primera si marca la diferencia cuando se nos presenta un vector de dimensión cero.
+En un dataframe al poner df[[i]] te da toda los valores de tucolumna, pero si tu pusieras df[,2] te saca la columna que no es numérica, pues es una lista-
+
+#### Ejercicio 1: Compute the mean of every column in mtcars
+```{r}
+media <- vector("double", ncol(mtcars))
+for ( i in seq_along(mtcars)){
+  media[i] <- mean(mtcars[[i]])
+}
+
+#¿Cómo nombras a tus filas en un tibble?
+```
+
+
+### Variaciones de bucle (for loops variations)
+1. Modifica un objeto existente en lugar de crear uno nuevo
+2. Bucles sobre nombres o variables, en lugar de indices.
+3. Manejo de salidas de longitud desconocida
+4. Manejo de secuencias de longitud desconocida
+
+#### Modifica un objeto existente en lugar de crear uno nuevo
+```{r}
+rescale01 <- function(x) {
+  rng <- range(x, na.rm = TRUE)
+  (x - rng[1]) / (rng[2] - rng[1])
+}
+```
+```{r}
+for (i in seq_along(df)) {
+  df[[i]] <- rescale01(df[[i]])
+}
+```
+
+#### Bucles sobre nombres o variables, en lugar de indices.
+El más conocido es trabajar con indices, es decir, números que nos ayudan a ubicar la posición de nuestro elemento.
+
+2. Bucle sobre elementos: Es difícil guarar la salida de manera eficiente.
+
+3. Bucle sobre los nombres: Se puede acceder al valor con el nombre x[[nm]]
+
+```{r}
+# results <- vector("list", length(x))
+# names(results) <- names(x)
+# ```
+# ```{r}
+# for (i in seq_along(x)) {
+#   name <- names(x)[[i]]
+#   value <- x[[i]]
+# }
+```
+
+#### Manejo de salidas de longitud desconocida
+Se pensará que se soluciona no dando desde el inicio la dimensión del vector solo declarando el nombrevector <- tipo() y que este vaya aumentando progresivamente, pero no es eficiente.
+str - Te ayuda a compactar la estructura arbitraria de R
+```{r}
+means <- c(0, 1, 2)
+
+output <- double()
+for (i in seq_along(means)) {
+  n <- sample(100, 1)
+  output <- c(output, rnorm(n, means[[i]]))
+}
+str(output)
+#>  num [1:138] 0.912 0.205 2.584 -0.789 0.588 ...
+```
+
+Una mejor solución es a través de una lista, puesto que te respecta lo que te sale en cada iteración. Además lo puedes ver todo junto con la función unlist(). O con la función purrr::flatten_dbl(), pero marcará un error si las listas no son todas del tipo double.
+
+```{r}
+out <- vector("list", length(means))
+for (i in seq_along(means)) {
+  n <- sample(100, 1)
+  out[[i]] <- rnorm(n, means[[i]])
+}
+str(out)
+str(unlist(out))
+#>  num [1:134] -0.3389 -0.0756 0.0402 0.1243 -0.9984 ...
+```
+
+Otra forma es con string es con la función paste() te unira cada iteración con la anterior, pero de salida tendrás un solo vector de caracteres. paste(output, collapse ="")
+
+Con data frames: dplyr::bind_rows(output) combina la salida en un sola base de datos.
+
+#### Manejo de secuencias de longitud desconocida
+Es común cuando estás trabajando con simulaciones. El bucle while te permitira parar cuando consigas lo que quieres. 
+
+```{r}
+while (condition) {
+  # body
+}
+```
+
+Un ciclo while también es más general que un ciclo for, porque puedes reescribir cualquier ciclo for como un ciclo while, pero no puedes reescribir cada ciclo while como un ciclo for:
+
+```{r}
+for (i in seq_along(x)) {
+  # body
+}
+
+# Equivalent to
+i <- 1
+while (i <= length(x)) {
+  # body
+  i <- i + 1 
+}
+```
+
+Buscamos que nos salgan 3 caras.
+```{r}
+flip <- function() sample(c("T", "H"), 1)
+
+flips <- 0
+nheads <- 0
+
+while (nheads < 3) {
+  if (flip() == "H") {
+    nheads <- nheads + 1
+  } else {
+    nheads <- 0
+  }
+  flips <- flips + 1
+}
+flips
+#> [1] 21
+```
+
+###  For loops vs. functionals
+R es un lenguaje de programación funcional, por lo que estos loops se usan más dentro de una función para después volverla a llamar.
+```{r}
+col_mean <- function(df) {
+  output <- vector("double", length(df))
+  for (i in seq_along(df)) {
+    output[i] <- mean(df[[i]])
+  }
+  output
+}
+```
+
+Puedes obtener otras medidas de tendencia central solo cambiando una linea de tu código.
+```{r}
+col_median <- function(df) {
+  output <- vector("double", length(df))
+  for (i in seq_along(df)) {
+    output[i] <- median(df[[i]])
+  }
+  output
+}
+col_sd <- function(df) {
+  output <- vector("double", length(df))
+  for (i in seq_along(df)) {
+    output[i] <- sd(df[[i]])
+  }
+  output
+}
+```
+
+Sin embargo, ya copiamos y pegamos más de dos veces, por lo que quiza se puede generalizar. Por ejemplo:
+```{r}
+f1 <- function(x) abs(x - mean(x)) ^ 1
+f2 <- function(x) abs(x - mean(x)) ^ 2
+f3 <- function(x) abs(x - mean(x)) ^ 3
+```
+Lo único que cambia es el número al que esta elevado, por lo que quiza hay otra manera de generalizarlo
+```{r}
+f <- function(x, i) abs(x - mean(x)) ^ i
+```
+Asi el código pasado se puede mejorar,
+```{r}
+col_summary <- function(df, fun) {
+  out <- vector("double", length(df))
+  for (i in seq_along(df)) {
+    out[i] <- fun(df[[i]])
+  }
+  out
+}
+
+```
+El paquete purr te proporciona funciones que eliminan varios loops. En base R, las funciones son (apply(), lapply(), tapply()).
+Purr te permite dividir los desafíos comunes de manipulación de listas en partes independientes:
+
+1. Una vez que haya resuelto ese problema, purr se encarga de generalizar su solución a todos los elementos de la lista. 
+
+2. Te permite trabajar mucho con pipes, ya que puedes ir empezando con pequeñas partes hasta resolver el problema completo.
+
+### La función map
+Map: Las funciones de map transforman su entrada aplicando una función a cada elemento y devolviendo un vector de la misma longitud que la entrada.
+
+Hay una función para cada tipo de salida:
+map() makes a list.
+map_lgl() makes a logical vector.
+map_int() makes an integer vector.
+map_dbl() makes a double vector.
+map_chr() makes a character vector.
+Cuando aplicas al vector la funcion, el tipo de vector estará determinado por el sufijo de la función map()
+
+La función map() no hace que vaya más rápido, sin embargo, crea más claridad.
+```{r}
+map_dbl(df, mean)
+map_dbl(df, median)
+map_dbl(df, sd)
+
+#Otra forma más evidente
+df %>% map_dbl(mean)
+
+```
+La función de map() está implementada en C y las funciones que puede aplicar son formúlas, un vector de caracter o un vector entero. Además de que se pueden aplicar más argumentos y preserva los nombres
+```{r}
+map_dbl(df, mean, trim = 0.5)
+```
+
+
+```{r}
+map(df,mean) #¿te lo maneja como una lista?
+```
+
+#### Shorcouts
+```{r}
+models <- mtcars %>% 
+  split(.$cyl) %>% 
+  map(function(df) lm(mpg ~ wt, data = df))
+```
+Split() tal cual como su nombre lo indica separa por valores iguales a tu columna. Dentro de map creas tu función.
+
+La manera de crear una función anónima en R es bastante detallada, por lo que map tiene un shortcout: una fórmula unilateral.
+```{r}
+models <- mtcars %>% 
+  split(.$cyl) %>% 
+  map(~lm(mpg ~ wt, data = .))
+```
+Ahora la sintaxis para crear una función anónima en map(~ (cuerpo)) en data = .,el punto se refiere a los elementos de la lista actual (funciona como las i en los loops "el indice" que va recorriendo).
+
+
+```{r}
+models %>% 
+  map(summary) %>% 
+  map_dbl(~.$r.squared)
+
+```
+Ojo aquí $r.square es una parte del summary. ¿Por qué lo define como función?
+
+Para extraer partes especiales por su nombre se puede hacer de la siguiente manera:
+```{r}
+models %>% 
+  map(summary) %>% 
+  map_dbl("adj.r.squared") 
+```
+
+También puede usar un número entero para seleccionar elementos por posición:
+```{r}
+x <- list(list(1, 2, 3), list(4, 5, 6), list(7, 8, 9))
+x %>% map_dbl(2)
+```
+
+#### En base R
+La función lapply() es basicamente map(), solo que en map puesdes usar los shortcouts para .f
+
+La función sapply() es un envoltorio de lapply() que simplifica la salida, pero no sabes de que tipo será la salida.
+```{r}
+x1 <- list(
+  c(0.27, 0.37, 0.57, 0.91, 0.20),
+  c(0.90, 0.94, 0.66, 0.63, 0.06), 
+  c(0.21, 0.18, 0.69, 0.38, 0.77)
+)
+x2 <- list(
+  c(0.50, 0.72, 0.99, 0.38, 0.78), 
+  c(0.93, 0.21, 0.65, 0.13, 0.27), 
+  c(0.39, 0.01, 0.38, 0.87, 0.34)
+)
+
+threshold <- function(x, cutoff = 0.8) x[x > cutoff]
+x1 %>% sapply(threshold) %>% str()
+
+x2 %>% sapply(threshold) %>% str()
+
+```
+vapply () es una alternativa segura a sapply () porque proporciona un argumento adicional que define el tipo. Su formato es  vapply(df, is.numeric, logical(1)) es equivalente a map_lgl(df, is.numeric). La ventaja es que puede trabajar con MATRICES, a diferencia de map() que solo vectores.
+
+### Lidiando con el fracaso
+En la función map() se repiten muchas operaciones, por lo que puede fallar y no dar una salida.
+Para trabajar con estos errores esta la función safely() es un adverbio; este toma una función (un verbo) y te regresa una versión modifica.En este caso la función no te arrojara un error. Siempre te regresa una lista con dos elementos:
+1. result es el resultado original. En caso de haber un error te regresa un NULL
+2. error es un objecto error. Si la operación funcionó correctamente te regresa NULL
+
+En base R se usa try(), pero es más dificil de trabajar con ella porque a veces te regresa el resultado original o un error.
+```{r}
+safe_log <- safely(log)
+str(safe_log(10)) #Resultado
+
+str(safe_log("a")) #Error
+```
+Safely está diseña para trabajar con maps()
+```{r}
+x <- list(1, 10, "a")
+y <- x %>% map(safely(log))
+str(y) #¿por que te marca List of 2?
+```
+
+Es fácil trabajar con ello, puesto que la función purrr:transpose, te divide en dos listas una con los resultados y otra de los errores
+```{r}
+y <- y %>% transpose()
+str(y)
+```
+
+A veces necesitas saber más del error, o sea, que valor le metiste a tu función que te dio error.
+
+```{r}
+is_ok <- y$error %>% map_lgl(is_null)
+x[!is_ok]
+
+y$result[is_ok] %>% flatten_dbl()
+
+```
+is_null, te dice que valores toman NULL, e regresa un vector lógico. Dame x[!] los que sean diferentes a TRUE. flatten_dbl() te lo muestra en forma de lista.
+
+Otra función es <br>possibly()</br>. Funciona de la misma manera que safely(), pero tu le das la manera en la que quieres que te regrese el error.
+```{r}
+x <- list(1, 10, "a")
+x %>% map_dbl(possibly(log, NA_real_))
+#> [1] 0.000000 2.302585       NA
+```
+<br>quietly()</br> En lugar de capturar errores, imprime las salidas, mesajes y advertencias de cada dato.Sin embargo, no corre en caso de error de entrada!!
+
+```{r}
+x <- list(1, -1)
+x %>% map(quietly(log)) %>% str()
+```
+### Mapeo sobre múltiples argumentos
+
+En ocasiones necesitas iterar en paralelo. Ese es el trabajo de <br>map2() </br> y <br> pmap() </br>.
+Deseas simular algunas variables normales con diferentes medias. 
+```{r}
+mu <- list(5, 10, -3)
+mu %>% 
+  map(rnorm, n = 5) %>% 
+  str()
+
+```
+Ahora si tmb quieres la desviación estándar. 
+
+```{r}
+sigma <- list(1, 5, 10)
+seq_along(mu) %>% 
+  map(~rnorm(5, mu[[.]], sigma[[.]])) %>% 
+  str()
+```
+
+Esto se puede hacer de una manera más sencilla con:
+```{r}
+map2(mu, sigma, rnorm, n = 5) %>% str()
+```
+Tenga en cuenta que los argumentos que varían para cada llamada vienen antes de la función; los argumentos que son iguales para cada llamada vienen después.
+
+Al igual que map (), map2 () es solo un envoltorio alrededor de un bucle for:
+```{r}
+# map2 <- function(x, y, f, ...) {
+#   out <- vector("list", length(x))
+#   for (i in seq_along(x)) {
+#     out[[i]] <- f(x[[i]], y[[i]], ...)
+#   }
+#   out
+```
+También podría imaginar map3 (), map4 (), map5 (), map6 (), etc., pero eso se volvería tedioso rápidamente. En cambio, purrr proporciona pmap () que toma una lista de argumentos. 
+```{r}
+n <- list(1, 3, 5)
+args1 <- list(n, mu, sigma)
+args1 %>%
+  pmap(rnorm) %>% 
+  str()
+
+```
+
+Para una mejor lectura se puede nombrar a los argumentos de pmap()
+```{r}
+args2 <- list(mean = mu, sd = sigma, n = n)
+args2 %>% 
+  pmap(rnorm) %>% 
+  str()
+```
+Muchas veces como los argumentos tienen la misma longitud, se suelen usar dataframes para corroborar que cada columna cuenta con un nombre y son de la misma longitud (evitar complicaciones)
+```{r}
+params <- tribble(
+  ~mean, ~sd, ~n,
+    5,     1,  1,
+   10,     5,  3,
+   -3,    10,  5
+)
+params %>% 
+  pmap(rnorm)
+
+```
+
+```{r}
+# #Ojo: Crear un nuevo tibble por columna vector es así la sintaxis: 
+# tibble(x = 1:5, y = 1, z = x ^ 2 + y)
+# Para crear un tible por filas:
+# tribble(
+#   ~x, ~y,  ~z,
+#   "a", 2,  3.6,
+#   "b", 1,  8.5
+# )
+```
+
+### Invocar diferentes funciones
+Hay un paso más en la complejidad: además de variar los argumentos de la función, también puede variar la función en sí:
+
+```{r}
+f <- c("runif", "rnorm", "rpois")
+param <- list(
+  list(min = -1, max = 1), 
+  list(sd = 5), 
+  list(lambda = 10)
+)
+```
+Ahora en este caso usamos la función <br> invoke_map() </br>
+```{r}
+invoke_map(f, param, n = 5) %>% str()
+```
+También puedes crear de nuevo un dataframe y agregamos una nueva columna con lo que nos arroje la función.
+```{r}
+sim <- tribble(
+  ~f,      ~params,
+  "runif", list(min = -1, max = 1),
+  "rnorm", list(sd = 5),
+  "rpois", list(lambda = 10)
+)
+sim %>% 
+  mutate(sim = invoke_map(f, params, n = 10))
+```
+
+### Walk()
+Walk es una alternativa al map() que usa cuando desea llamar a una función por sus efectos secundarios, en lugar de por su valor de retorno. Por lo general, hace esto porque desea representar la salida en la pantalla o guardar archivos en el disco; lo importante es la acción, no el valor de retorno. 
+```{r}
+x <- list(1, "a", 3)
+
+x %>% 
+  walk(print)
+#> [1] 1
+#> [1] "a"
+#> [1] 3
+```
+Se suele usar más <br>walk2</br> o <br> pwalk </br>. Por ejemplo si tienes una lista de graficos o un vector de nombres de archivo, tu puedes usar pwalk() para guardar cada atchivo con su correspondiente nombre.
+```{r}
+library(ggplot2)
+plots <- mtcars %>% 
+  split(.$cyl) %>% 
+  map(~ggplot(., aes(mpg, wt)) + geom_point())
+paths <- stringr::str_c(names(plots), ".pdf")
+
+pwalk(list(paths, plots), ggsave, path = tempdir())
+```
+
+### Otros patrones de loops
+Purrr proporciona una serie de otras funciones que se abstraen de otros tipos de bucles for.
+
+#### Funciones que predicen
+Varias funciones trabajan como funciones de predicado que devuelven un solo VERDADERO o FALSO.
+<br> keep </br> y <br> discard </br> mantienen los elementos de entrada donde el predicado es T o F
+```{r}
+iris %>% 
+  keep(is.factor) %>% 
+  str()
+```
+Solo te devuelve quien usa vector con factores
+```{r}
+iris %>% 
+  discard(is.factor) %>% 
+  str()
+```
+
+<br> some() </br> y <br> every() </br> determina si el predicado es verdadero para alguno o para todos los elementos.
+
+```{r}
+x <- list(1:5, letters, list(10))
+x %>% 
+  some(is_character)
+x %>% 
+  every(is_vector)
+
+```
+<br> detect() </br> encuentra el primer elemento donde el predicado es cierto; <br> detect_index() </br> devuelve su posición.
+```{r}
+x <- sample(10)
+x %>% 
+  detect(~ . > 5)
+x %>% 
+  detect_index(~ . > 5)
+
+```
+<br> head_while() </br> y <br> tail_while() </br> toma elementos del inicio y final del vector mientras el predicado sea cierto.
+```{r}
+x %>% 
+  head_while(~ . > 5)
+
+x %>% 
+  tail_while(~ . > 5)
+```
+
+#### Reducir y acumular 
+A veces, tiene una lista compleja que desea reducir a una lista simple aplicando repetidamente una función que reduce un par a un singleton. Esto es útil si desea aplicar un verbo dplyr de dos tablas a varias tablas. Por ejemplo, es posible que tenga una lista de dateframes y desee reducir a un solo dateframes uniendo los elementos:
+```{r}
+dfs <- list(
+  age = tibble(name = "John", age = 30),
+  sex = tibble(name = c("John", "Mary"), sex = c("M", "F")),
+  trt = tibble(name = "Mary", treatment = "A")
+)
+
+dfs %>% reduce(full_join)
+```
+O tal vez, tu tienes una lista de vectores y quieres encontrar la intersección.
+```{r}
+vs <- list(
+  c(1, 3, 5, 6, 10),
+  c(1, 2, 3, 7, 8, 10),
+  c(1, 2, 3, 4, 8, 9, 10)
+)
+
+vs %>% reduce(intersect)
+
+```
+<br> reduce() </br> toma una función "binaria" (es decir, una función con dos entradas primarias) y la aplica repetidamente a una lista hasta que solo queda un elemento.
+
+<br> accumulated() </br> es similar pero conserva todos los resultados intermedios. Podría usarlo para implementar una suma acumulativa:
+
