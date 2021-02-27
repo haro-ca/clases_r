@@ -7,9 +7,6 @@ editor_options:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-```
-
-```{r}
 library(tidyverse)
 ```
 
@@ -60,10 +57,39 @@ median(df$d)
 ### "No debes de usar -copy and paste- más de dos veces, mejor usa un loop"
 ```{r}
 output <- vector("double", ncol(df))  # 1. output
+
+# seq_along() == seq(1, length(df))
 for (i in seq_along(df)) {            # 2. sequence
   output[[i]] <- median(df[[i]])      # 3. body
 }
-output
+
+
+# Ejemplo de una lista anidada sumamente complicada
+lista_anidada <- list(lista_sup1 = list(lista_inf1 = c(1, 2, 4)), lista_sup2 = c(1, 2, 3))
+
+# Esto nos trae listas
+lista_anidada[1]
+lista_anidada[2]
+
+# Esto nos trae la lista anidada
+class(lista_anidada[[1]][1])
+
+# Esto nos trae el contenido de la lista anidada
+class(lista_anidada[[1]][[1]])
+
+# Trasladándolo a nuestro ejemplo, tenemos lo siguiente:
+i <- 1
+typeof(df[[i]]) # acceso a la lista Y a los contenidos de la misma (vector)
+typeof(df[i]) # acceso a la lista
+median(df[[i]])
+median(df[i])
+
+# Sin embargo, el tidyverse nos permite una sintaxis un poco más "opinionated"
+df %>% 
+  select(a)
+
+df %>% 
+  pull(a)
 
 for (i in 1:length(df)) {            # 2. sequence
   output[[i]]<- median(df[[i]])      # 3. body (vector)
@@ -484,10 +510,24 @@ param <- list(
   list(sd = 5), 
   list(lambda = 10)
 )
+
+set.seed(1)
+param <- list(
+  runif(n = 5, min = -1, max = 1), 
+  rnorm(n = 5, sd = 5), 
+  rpois(n = 5, lambda = 10)
+)
+
 ```
 Ahora en este caso usamos la función <br> invoke_map() </br>
 ```{r}
+set.seed(1)
 invoke_map(f, param, n = 5) %>% str()
+
+#  f     y   -> f(y)
+# [g]  [x]  ->  g(x)
+#  h    x  ->  h(x)
+
 ```
 También puedes crear de nuevo un dataframe y agregamos una nueva columna con lo que nos arroje la función.
 ```{r}
